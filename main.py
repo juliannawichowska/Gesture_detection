@@ -31,11 +31,11 @@ def captureCamera(left=False):
         frame = cv2.flip(frame, 1)
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.rectangle(frame, (outerRectangleXIni, outerRectangleYIni),
-                      (outerRectangleXFin, outerRectangleYFin), (0, 255, 0), 0)
+                      (outerRectangleXFin, outerRectangleYFin), (0, 0, 0), 0)
         cv2.rectangle(frame, (innerRectangleXIni, innerRectangleYIni),
-                      (innerRectangleXFin, innerRectangleYFin), (255, 0, 0), 0)
+                      (innerRectangleXFin, innerRectangleYFin), (0, 0, 0), 0)
         cv2.putText(frame, 'Place your hand in the square', (0, 35),
-                    font, 1, (255, 0, 0), 3, cv2.LINE_AA)
+                    font, 1, (0, 0, 0), 3, cv2.LINE_AA)
         cv2.imshow('Camera', frame)
 
         key = cv2.waitKey(1)
@@ -164,10 +164,10 @@ def hand_detection(frame, lower_bound_color, upper_bound_color, left):
 
     if left:
         roi = frame[100:300, 100:300]
-        cv2.rectangle(frame, (100, 100), (300, 300), (0, 255, 0), 0)
+        cv2.rectangle(frame, (100, 100), (300, 300), (0, 0, 0), 0)
     else:
         roi = frame[50:300, 300:550]
-        cv2.rectangle(frame, (300, 50), (550, 300), (0, 255, 0), 0)
+        cv2.rectangle(frame, (300, 50), (550, 300), (0, 0, 0), 0)
 
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
@@ -229,26 +229,26 @@ def analyse_contours(frame, cnt, l):
 
     arearatio = ((areahull - areacnt) / areacnt) * 100
 
-    font = cv2.FONT_HERSHEY_SIMPLEX
+    font = cv2.FONT_HERSHEY_PLAIN
     if l == 1:
         if areacnt < 2000:
             cv2.putText(frame, 'Place hand in the box', (0, 50), font, 2,
-                        (0, 0, 255), 3, cv2.LINE_AA)
+                        (255, 255, 255), 3, cv2.LINE_AA)
         else:
             if arearatio < 12:
-                cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 255), 3,
+                cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 0), 3,
                             cv2.LINE_AA)
             elif arearatio < 17.5:
-                cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 255), 3,
+                cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 0), 3,
                             cv2.LINE_AA)
             else:
-                cv2.putText(frame, 'Prev slide', (0, 50), font, 2, (0, 0, 255), 3,
+                cv2.putText(frame, 'Prev slide', (0, 50), font, 2, (0, 0, 0), 3,
                             cv2.LINE_AA)
     elif l == 2:
-        cv2.putText(frame, 'Next slide', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+        cv2.putText(frame, 'Next slide', (0, 50), font, 2, (0, 0, 0), 3, cv2.LINE_AA)
     elif l == 3 or l == 5:
 
-        cv2.putText(frame, 'Stop presentation', (0, 50), font, 2, (0, 0, 255), 3,
+        cv2.putText(frame, 'Stop presentation', (0, 50), font, 2, (0, 0, 0), 3,
                         cv2.LINE_AA)
 
 def show_results(binary_mask, mask, frame):
