@@ -33,7 +33,7 @@ def captureCamera(left=False):
         cv2.rectangle(frame, (outerRectangleXIni, outerRectangleYIni),
                       (outerRectangleXFin, outerRectangleYFin), (0, 0, 0), 0)
         cv2.rectangle(frame, (innerRectangleXIni, innerRectangleYIni),
-                      (innerRectangleXFin, innerRectangleYFin), (0, 0, 0), 0)
+                      (innerRectangleXFin, innerRectangleYFin), (0, 0, 255), 0)
         cv2.putText(frame, 'Place your hand in the square', (0, 35),
                     font, 1, (0, 0, 0), 3, cv2.LINE_AA)
         cv2.imshow('Camera', frame)
@@ -217,7 +217,7 @@ def analyse_defects(cnt, roi):
             if angle <= 90 and d > 30:
                 l += 1
                 cv2.circle(roi, far, 3, [255, 0, 0], -1)
-            cv2.line(roi, start, end, [0, 255, 0], 2)
+            cv2.line(roi, start, end, [0, 0, 255], 2)
     return l
 
   # Write to the image the signal of the hand.
