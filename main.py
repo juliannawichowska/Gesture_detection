@@ -1,20 +1,13 @@
-#!/usr/bin/env python
-
 import numpy as np
 import cv2
 import math
-import traceback
+
+# Creates a color bound based on a ROI
+# It analyses the blue square and calculates the maximum, minimum and average HSV values inside the square.
+#  Those maximum and minimum values will be used to determine the maximum sensibility possible, and the average will be the color bound used to detect the hand.
 
 def captureCamera(left=False):
-    """
-    Creates a color bound based on a ROI
-    It analyses the blue square and calculates the maximum, minimum and average HSV values inside the square.
-    Those maximum and minimum values will be used to determine the maximum sensibility possible, and the average will be the color bound used to detect the hand.
-    Parameters
-    ----------
-    left : bool, optional
-      Set the ROI on the left side of the screen
-    """
+
     cap = cv2.VideoCapture(0)
 
     outerRectangleXIni = 300
@@ -41,7 +34,7 @@ def captureCamera(left=False):
                       (outerRectangleXFin, outerRectangleYFin), (0, 255, 0), 0)
         cv2.rectangle(frame, (innerRectangleXIni, innerRectangleYIni),
                       (innerRectangleXFin, innerRectangleYFin), (255, 0, 0), 0)
-        cv2.putText(frame, 'Please center your hand in the square', (0, 35),
+        cv2.putText(frame, 'Place your hand in the square', (0, 35),
                     font, 1, (255, 0, 0), 3, cv2.LINE_AA)
         cv2.imshow('Camera', frame)
 
@@ -73,24 +66,22 @@ def captureCamera(left=False):
     sAverage = np.average(s)
     vAverage = np.average(v)
 
-    hMaxSensibility = max(abs(lower[0] - hAverage), abs(upper[0] - hAverage))
-    sMaxSensibility = max(abs(lower[1] - sAverage), abs(upper[1] - sAverage))
-    vMaxSensibility = max(abs(lower[2] - vAverage), abs(upper[2] - vAverage))
+    hMax = max(abs(lower[0] - hAverage), abs(upper[0] - hAverage))
+    sMax = max(abs(lower[1] - sAverage), abs(upper[1] - sAverage))
+    vMax = max(abs(lower[2] - vAverage), abs(upper[2] - vAverage))
 
     cv2.destroyAllWindows()
     return np.array([[hAverage, sAverage, vAverage],
-                     [hMaxSensibility, sMaxSensibility, vMaxSensibility]])
+                     [hMax, sMax, vMax]])
 
 
 def display_result(roi):
-    """Draws images of the selected ROI"""
     hsvRoi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     roi_result = np.concatenate((roi, hsvRoi))
     cv2.imshow('ROI Result', roi_result)
 
 
 def wait_approval():
-    """Checks if User wants the selected ROI"""
     approval = False
     key = cv2.waitKey(0)
     if key != -1 and key != ord('n'):
@@ -101,24 +92,9 @@ def wait_approval():
 def nothing(x):
     pass
 
-
+# HSV parameters setting
 def apply_sensibility(avg_color, newHSens, newSSens, newVSens, maxSensibility):
-    """
-    Applies sensibility values for each value of HSV, taking into account the maximum sensibility possible.
-    It analyses the parameters and executes the hand detection accordingly.
-    Parameters
-    ----------
-    avg_color : array
-      The average of HSV values to be detected
-    newHSens : int
-      Percentage of sensibility to apply to Hue
-    newSSens : int
-      Percentage of sensibility to apply to Saturation
-    newVSens : int
-      Percentage of sensibility to apply to Value
-    maxSensibility : array
-      The maximum error margin of HSV values to be detected
-    """
+
     hSens = (newHSens * maxSensibility[0]) / 100
     SSens = (newSSens * maxSensibility[1]) / 100
     VSens = (newVSens * maxSensibility[2]) / 100
@@ -128,38 +104,20 @@ def apply_sensibility(avg_color, newHSens, newSSens, newVSens, maxSensibility):
         [avg_color[0] + hSens, avg_color[1] + SSens, avg_color[2] + VSens])
     return np.array([lower_bound_color, upper_bound_color])
 
-
+ # possibiliy to change HSV values to better adapt to light [%]
 def start(avg_color, max_sensibility, video=True, path=None, left=False):
-    """
-    Initializes the detection process.
-    It analyses the parameters and executes the hand detection accordingly.
-    Parameters
-    ----------
-    avg_color : array
-      The average of HSV values to be detected
-    max_sensibility : array
-      The maximum error margin of HSV values to be detected
-    video : bool, optional
-      False if single image
-      True if video stream
-    path : str, optional
-      Path for the image to be analysed
-    left : bool, optional
-      Set the ROI on the left side of the screen
-    """
 
-    # change this value to better adapt to environment light (percentage values)
-    hSensibility = 100
-    sSensibility = 100
-    vSensibility = 100
+    h = 100
+    s = 100
+    v = 100
 
-    apply_sensibility(avg_color, hSensibility, sSensibility, vSensibility,
+    apply_sensibility(avg_color, h, s, v,
                       max_sensibility)
 
-    cv2.namedWindow('Hand Detection')
-    cv2.createTrackbar('HSensb', 'Hand Detection', hSensibility, 100, nothing)
-    cv2.createTrackbar('SSensb', 'Hand Detection', sSensibility, 100, nothing)
-    cv2.createTrackbar('VSensb', 'Hand Detection', vSensibility, 100, nothing)
+    cv2.namedWindow('Gesture recognition')
+    cv2.createTrackbar('H', 'Gesture recognition', h, 100, nothing)
+    cv2.createTrackbar('S', 'Gesture recognition', s, 100, nothing)
+    cv2.createTrackbar('V', 'Gesture recognition', v, 100, nothing)
 
     if path != None:
         frame = cv2.imread(path)
@@ -173,12 +131,12 @@ def start(avg_color, max_sensibility, video=True, path=None, left=False):
                 _, frame = video_capture.read()
                 frame = cv2.flip(frame, 1)
 
-                # get values from trackbar
-                newHSens = cv2.getTrackbarPos('HSensb', 'Hand Detection')
-                newSSens = cv2.getTrackbarPos('SSensb', 'Hand Detection')
-                newVSens = cv2.getTrackbarPos('VSensb', 'Hand Detection')
+                # get values from bars
+                newHSens = cv2.getTrackbarPos('H', 'Gesture recognition')
+                newSSens = cv2.getTrackbarPos('S', 'Gesture recognition')
+                newVSens = cv2.getTrackbarPos('V', 'Gesture recognition')
 
-                # and apply the new sensibility values
+                # apply the new sensibility values
                 lower_bound_color, upper_bound_color = apply_sensibility(
                     avg_color, newHSens, newSSens, newVSens, max_sensibility)
 
@@ -200,22 +158,8 @@ def start(avg_color, max_sensibility, video=True, path=None, left=False):
                 cv2.destroyAllWindows()
                 break
 
-
+      # setting the ROI on the left side of the screen
 def hand_detection(frame, lower_bound_color, upper_bound_color, left):
-    """
-    Initializes the detection process.
-    It analyses the parameters and executes the hand detection accordingly.
-    Parameters
-    ----------
-    frame : array-like
-      The frame to be analysed
-    lower_bound_color : array
-      The min of HSV values to be detected
-    upper_bound_color : array
-      The max of HSV values to be detected
-    left : bool, optional
-      Set the ROI on the left side of the screen
-    """
     kernel = np.ones((3, 3), np.uint8)
 
     if left:
@@ -243,19 +187,8 @@ def hand_detection(frame, lower_bound_color, upper_bound_color, left):
 
     show_results(binary_mask, mask, frame)
 
-
+   # Calculates how many convexity defects are on the image. Defects represent the division between fingers.
 def analyse_defects(cnt, roi):
-    """
-    Calculates how many convexity defects are on the image.
-    A convexity defect is a area that is inside the convexity hull but does not belong to the object.
-    Those defects in our case represent the division between fingers.
-    Parameters
-    ----------
-    cnt : array-like
-      Contour of max area on the image, in this case, the contour of the hand
-    roi : array-like
-      Region of interest where should be drawn the found convexity defects
-    """
     epsilon = 0.0005 * cv2.arcLength(cnt, True)
     approx = cv2.approxPolyDP(cnt, epsilon, True)
 
@@ -287,21 +220,8 @@ def analyse_defects(cnt, roi):
             cv2.line(roi, start, end, [0, 255, 0], 2)
     return l
 
-
+  # Write to the image the signal of the hand.
 def analyse_contours(frame, cnt, l):
-    """
-    Writes to the image the signal of the hand.
-    The hand signals can be the numbers from 0 to 5, the 'ok' signal, and the 'all right' symbol.
-    The signals is first sorted by the number of convexity defects. Then, if the number of convexity defects is 1, 2, or 3, the area ratio is to be analysed.
-    Parameters
-    ----------
-    frame : array-like
-      The frame to be analysed
-    cnt : array-like
-      Contour of max area on the image, in this case, the contour of the hand
-    l : int
-      Number of convexity defects
-    """
     hull = cv2.convexHull(cnt)
 
     areahull = cv2.contourArea(hull)
@@ -312,7 +232,7 @@ def analyse_contours(frame, cnt, l):
     font = cv2.FONT_HERSHEY_SIMPLEX
     if l == 1:
         if areacnt < 2000:
-            cv2.putText(frame, 'Put hand in the box', (0, 50), font, 2,
+            cv2.putText(frame, 'Place hand in the box', (0, 50), font, 2,
                         (0, 0, 255), 3, cv2.LINE_AA)
         else:
             if arearatio < 12:
@@ -327,48 +247,21 @@ def analyse_contours(frame, cnt, l):
     elif l == 2:
         cv2.putText(frame, 'Next slide', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
     elif l == 3 or l == 5:
-      #  if arearatio < 27:
+
         cv2.putText(frame, 'Stop presentation', (0, 50), font, 2, (0, 0, 255), 3,
                         cv2.LINE_AA)
-      #  else:
-         #   cv2.putText(frame, 'ok', (0, 50), font, 2, (0, 0, 255), 3,
-         #               cv2.LINE_AA)
-  #  elif l == 4:
-   #     cv2.putText(frame, '4', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-  #  elif l == 5 or l == 4:
-    #    cv2.putText(frame, 'Stop presentation', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-    elif l == 6:
-        cv2.putText(frame, 'reposition', (0, 50), font, 2, (0, 0, 255), 3,
-                    cv2.LINE_AA)
-    else:
-        cv2.putText(frame, 'reposition', (10, 50), font, 2, (0, 0, 255), 3,
-                    cv2.LINE_AA)
-
 
 def show_results(binary_mask, mask, frame):
-    """
-    Shows the image with the results on it.
-    The image is a result of a combination of the image with the result on it, the original captured ROI, and the ROI after optimizations.
-    Parameters
-    ----------
-    binary_mask : array-like
-      ROI as it is captured
-    mask : array-like
-      ROI after optimizations
-    frame : array-like
-      Frame to be displayed
-    """
     combine_masks = np.concatenate((binary_mask, mask), axis=0)
     height, _, _ = frame.shape
     _, width = combine_masks.shape
     masks_result = cv2.resize(combine_masks, dsize=(width, height))
     masks_result = cv2.cvtColor(masks_result, cv2.COLOR_GRAY2BGR)
     result_image = np.concatenate((frame, masks_result), axis=1)
-    cv2.imshow('Hand Detection', result_image)
+    cv2.imshow('Gesture recognition', result_image)
 
 
 def main():
-    """Main function of the app"""
     captureCamera()
     lower_color = np.array([0, 50, 120], dtype=np.uint8)
     upper_color = np.array([180, 150, 250], dtype=np.uint8)
