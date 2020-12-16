@@ -6,10 +6,11 @@ import math
 # It analyses the blue square and calculates the maximum, minimum and average HSV values inside the square.
 #  Those maximum and minimum values will be used to determine the maximum sensibility possible, and the average will be the color bound used to detect the hand.
 
-def captureCamera(left=False):
+def captureCamera():
 
     cap = cv2.VideoCapture(0)
 
+    #setting dimensions of outer and inner rectangles
     outerRectangleXIni = 300
     outerRectangleYIni = 50
     outerRectangleXFin = 550
@@ -19,17 +20,12 @@ def captureCamera(left=False):
     innerRectangleXFin = 450
     innerRectangleYFin = 200
 
-    if left:
-        move_to_left = 250
-        outerRectangleXIni = outerRectangleXIni - move_to_left
-        outerRectangleXFin = outerRectangleXFin - move_to_left
-        innerRectangleXIni = innerRectangleXIni - move_to_left
-        innerRectangleXFin = innerRectangleXFin - move_to_left
-
     while True:
         ret, frame = cap.read()
         frame = cv2.flip(frame, 1)
         font = cv2.FONT_HERSHEY_SIMPLEX
+
+        #displaying outer and inner rectangles
         cv2.rectangle(frame, (outerRectangleXIni, outerRectangleYIni),
                       (outerRectangleXFin, outerRectangleYFin), (0, 0, 0), 0)
         cv2.rectangle(frame, (innerRectangleXIni, innerRectangleYIni),
@@ -43,9 +39,11 @@ def captureCamera(left=False):
             cap.release()
             return None
         elif key != -1:
+            # saving image from inner rectangle
             roi = frame[innerRectangleYIni +
                         1:innerRectangleYFin, innerRectangleXIni +
                         1:innerRectangleXFin]
+            # displaying inner rectangle
             display_result(roi)
             approved = wait_approval()
             if approved:
@@ -53,6 +51,10 @@ def captureCamera(left=False):
             cv2.destroyAllWindows()
 
     cap.release()
+
+    # analysis of the image captured in the inner rectangle
+
+    # converting image of inner rectangle from RGB to HSV
     hsvRoi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
     lower = np.array(
@@ -75,15 +77,20 @@ def captureCamera(left=False):
                      [hMax, sMax, vMax]])
 
 
+# displaying the analysis of image from inner rectangle
 def display_result(roi):
+    # converting image of inner rectangle from RGB to HSV
     hsvRoi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    # combining roi and hsvRoi
     roi_result = np.concatenate((roi, hsvRoi))
+    # displaying the roi_result
     cv2.imshow('ROI Result', roi_result)
 
-
+# checking if the inner rectangle image has been accepted
 def wait_approval():
     approval = False
     key = cv2.waitKey(0)
+    # checking if user didn't quit the program or wanted to redo the photo
     if key != -1 and key != ord('n'):
         approval = True
     return approval
@@ -105,7 +112,7 @@ def apply_sensibility(avg_color, newHSens, newSSens, newVSens, maxSensibility):
     return np.array([lower_bound_color, upper_bound_color])
 
  # possibiliy to change HSV values to better adapt to light [%]
-def start(avg_color, max_sensibility, video=True, path=None, left=False):
+def start(avg_color, max_sensibility):
 
     h = 100
     s = 100
@@ -119,63 +126,55 @@ def start(avg_color, max_sensibility, video=True, path=None, left=False):
     cv2.createTrackbar('S', 'Gesture recognition', s, 100, nothing)
     cv2.createTrackbar('V', 'Gesture recognition', v, 100, nothing)
 
-    if path != None:
-        frame = cv2.imread(path)
-        hand_detection(frame, lower_bound_color, upper_bound_color, left)
-        cv2.waitKey(0)
-    else:
-        video_capture = cv2.VideoCapture(0)
+    video_capture = cv2.VideoCapture(0)
 
-        while True:
-            try:
-                _, frame = video_capture.read()
-                frame = cv2.flip(frame, 1)
+    while True:
+        try:
+            _, frame = video_capture.read()
+            frame = cv2.flip(frame, 1)
 
-                # get values from bars
-                newHSens = cv2.getTrackbarPos('H', 'Gesture recognition')
-                newSSens = cv2.getTrackbarPos('S', 'Gesture recognition')
-                newVSens = cv2.getTrackbarPos('V', 'Gesture recognition')
+            # get values from bars
+            newHSens = cv2.getTrackbarPos('H', 'Gesture recognition')
+            newSSens = cv2.getTrackbarPos('S', 'Gesture recognition')
+            newVSens = cv2.getTrackbarPos('V', 'Gesture recognition')
 
-                # apply the new sensibility values
-                lower_bound_color, upper_bound_color = apply_sensibility(
-                    avg_color, newHSens, newSSens, newVSens, max_sensibility)
+            # apply the new sensibility values
+            lower_bound_color, upper_bound_color = apply_sensibility(
+                avg_color, newHSens, newSSens, newVSens, max_sensibility)
 
-                hand_detection(frame, lower_bound_color, upper_bound_color,
-                               left)
+            # activate the hand_detection
+            hand_detection(frame, lower_bound_color, upper_bound_color)
 
-            except Exception as e:
-                print (e)
-                pass
+        except Exception as e:
+            print (e)
+            pass
 
-            if not video:
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                break
+        key = cv2.waitKey(10)
+        if key == ord('q'):
+             video_capture.release()
+             cv2.destroyAllWindows()
+             break
 
-            key = cv2.waitKey(10)
-            if key == ord('q'):
-                video_capture.release()
-                cv2.destroyAllWindows()
-                break
-
-      # setting the ROI on the left side of the screen
-def hand_detection(frame, lower_bound_color, upper_bound_color, left):
+def hand_detection(frame, lower_bound_color, upper_bound_color):
     kernel = np.ones((3, 3), np.uint8)
 
-    if left:
-        roi = frame[100:300, 100:300]
-        cv2.rectangle(frame, (100, 100), (300, 300), (0, 0, 0), 0)
-    else:
-        roi = frame[50:300, 300:550]
-        cv2.rectangle(frame, (300, 50), (550, 300), (0, 0, 0), 0)
+    roi = frame[50:300, 300:550]
+    cv2.rectangle(frame, (300, 50), (550, 300), (0, 0, 0), 0)
 
+    #converting image from RGB to HSV
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
+    #creating binary_mask by setting threshold (first image on right)
     binary_mask = cv2.inRange(hsv, lower_bound_color, upper_bound_color)
+
+    #creating mask (second image on right) using dilation and erosion
     mask = cv2.dilate(binary_mask, kernel, iterations=3)
     mask = cv2.erode(mask, kernel, iterations=3)
+
+    #removing Gaussian noise from an image
     mask = cv2.GaussianBlur(mask, (5, 5), 90)
 
+    #finding contours in the image
     contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE,
                                               cv2.CHAIN_APPROX_SIMPLE)
     try:
@@ -185,9 +184,10 @@ def hand_detection(frame, lower_bound_color, upper_bound_color, left):
     except ValueError:
         pass
 
+    #displaying frame, binary_mask and mask
     show_results(binary_mask, mask, frame)
 
-   # Calculates how many convexity defects are on the image. Defects represent the division between fingers.
+# Calculates how many convexity defects are on the image. Defects represent the division between fingers.
 def analyse_defects(cnt, roi):
     epsilon = 0.0005 * cv2.arcLength(cnt, True)
     approx = cv2.approxPolyDP(cnt, epsilon, True)
@@ -220,8 +220,9 @@ def analyse_defects(cnt, roi):
             cv2.line(roi, start, end, [0, 0, 255], 2)
     return l
 
-  # Write to the image the signal of the hand.
+# contour analysis to detect a gesture
 def analyse_contours(frame, cnt, l):
+
     hull = cv2.convexHull(cnt)
 
     areahull = cv2.contourArea(hull)
@@ -252,12 +253,17 @@ def analyse_contours(frame, cnt, l):
                         cv2.LINE_AA)
 
 def show_results(binary_mask, mask, frame):
+
+    #combining binary_mask and mask
     combine_masks = np.concatenate((binary_mask, mask), axis=0)
+    #setting the setting dimensions and colors of combine_masks
     height, _, _ = frame.shape
     _, width = combine_masks.shape
     masks_result = cv2.resize(combine_masks, dsize=(width, height))
     masks_result = cv2.cvtColor(masks_result, cv2.COLOR_GRAY2BGR)
+    # combining combine_masks and frame to create final image
     result_image = np.concatenate((frame, masks_result), axis=1)
+    #displaying the final result
     cv2.imshow('Gesture recognition', result_image)
 
 
