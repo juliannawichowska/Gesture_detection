@@ -57,6 +57,8 @@ def captureCamera():
     # converting image of inner rectangle from RGB to HSV
     hsvRoi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
+    # Parse ROI (small red window) from rgb to hsv and calculate skin parameters (hsv - average and max)
+
     lower = np.array(
         [hsvRoi[:, :, 0].min(), hsvRoi[:, :, 1].min(), hsvRoi[:, :, 2].min()])
     upper = np.array(
@@ -164,10 +166,10 @@ def hand_detection(frame, lower_bound_color, upper_bound_color):
     #converting image from RGB to HSV
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-    #creating binary_mask by setting threshold (first image on right)
+    #creating binary_mask by setting threshold
     binary_mask = cv2.inRange(hsv, lower_bound_color, upper_bound_color)
 
-    #creating mask (second image on right) using dilation and erosion
+    #creating mask using dilation and erosion
     mask = cv2.dilate(binary_mask, kernel, iterations=3)
     mask = cv2.erode(mask, kernel, iterations=3)
 
@@ -202,7 +204,6 @@ def analyse_defects(cnt, roi):
             start = tuple(approx[s][0])
             end = tuple(approx[e][0])
             far = tuple(approx[f][0])
-            pt = (100, 180)
 
             a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
             b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
@@ -236,10 +237,7 @@ def analyse_contours(frame, cnt, l):
             cv2.putText(frame, 'Place hand in the box', (0, 50), font, 2,
                         (255, 255, 255), 3, cv2.LINE_AA)
         else:
-            if arearatio < 12:
-                cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 0), 3,
-                            cv2.LINE_AA)
-            elif arearatio < 17.5:
+            if arearatio < 17.5:
                 cv2.putText(frame, 'Start presentation', (0, 50), font, 2, (0, 0, 0), 3,
                             cv2.LINE_AA)
             else:
@@ -247,10 +245,12 @@ def analyse_contours(frame, cnt, l):
                             cv2.LINE_AA)
     elif l == 2:
         cv2.putText(frame, 'Next slide', (0, 50), font, 2, (0, 0, 0), 3, cv2.LINE_AA)
-    elif l == 3 or l == 5:
-
+    elif l == 5:
         cv2.putText(frame, 'Stop presentation', (0, 50), font, 2, (0, 0, 0), 3,
                         cv2.LINE_AA)
+    else:
+       cv2.putText(frame, 'Not recognized', (0, 50), font, 2,
+                        (255, 255, 255), 3, cv2.LINE_AA)
 
 def show_results(binary_mask, mask, frame):
 
